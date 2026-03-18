@@ -46,14 +46,14 @@ class ImportUsersJob implements ShouldQueue
                 ];
 
                 if (count($usersBatch) >= $batchSize) {
-                    User::upsert($usersBatch, ['email'], ['name', 'password', 'updated_at']);
+                    User::upsert($usersBatch, ['email'], ['name', 'password']);
                     $usersBatch = [];
                 }
             }
         }
 
         if (!empty($usersBatch)) {
-            User::upsert($usersBatch, ['email'], ['name', 'password', 'updated_at']);
+            User::upsert($usersBatch, ['email'], ['name', 'password']);
         }
 
         $reader->close();
