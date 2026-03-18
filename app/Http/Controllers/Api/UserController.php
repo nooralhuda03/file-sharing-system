@@ -3,60 +3,29 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-use OpenSpout\Reader\XLSX\Reader;
+use App\Http\Requests\ImportUserRequest;
+use App\Jobs\ImportUsersJob;
 use Exception;
 
 class UserController extends Controller
 {
-    public function importUsers(Request $request)
+    public function importUsers(ImportUserRequest $request)
 {
-    set_time_limit(600);
-
-    $request->validate([
-        'file' => 'required|file|mimes:xlsx'
-    ]);
+    $validatedData = $request->validated();
 
     try {
-        $filePath = $request->file('file')->getRealPath();
-        $reader = new \OpenSpout\Reader\XLSX\Reader();
-        $reader->open($filePath);
+       
+        $fileName = time() . '_' . $validatedData['file']->getClientOriginalName();
+        $path = $validatedData['file']->storeAs('temp_imports', $fileName);
+        $fullPath = storage_path('app/' . $path);
 
-        $batchSize = 100;
-        $usersBatch = [];
-        $now = now();
+       
+        ImportUsersJob::dispatch($fullPath);
 
-        foreach ($reader->getSheetIterator() as $sheet) {
-            foreach ($sheet->getRowIterator() as $index => $row) {
-                if ($index === 1) continue;
-
-                $cells = $row->toArray();
-                if (empty($cells[1])) continue; 
-
-                $usersBatch[] = [
-                    'name'       => $cells[0],
-                    'email'      => $cells[1],
-                    'password'   => Hash::make($cells[2] ?? 'password123'),
-                    
-                ];
-
-                if (count($usersBatch) >= $batchSize) {
-                   
-                    User::upsert($usersBatch, ['email'], ['name', 'password', 'updated_at']);
-                    $usersBatch = [];
-                }
-            }
-        }
-
-        if (!empty($usersBatch)) {
-            User::upsert($usersBatch, ['email'], ['name', 'password', 'updated_at']);
-        }
-
-        $reader->close();
-
-        return response()->json(['status' => 'success', 'message' => 'Users synced successfully.']);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'The file is being processed in the background.'
+        ]);
 
     } catch (Exception $e) {
         return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
