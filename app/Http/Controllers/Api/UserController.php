@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ImportUserRequest;
 use App\Jobs\ImportUsersJob;
 use Exception;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
@@ -17,7 +18,8 @@ class UserController extends Controller
        
         $fileName = time() . '_' . $validatedData['file']->getClientOriginalName();
         $path = $validatedData['file']->storeAs('temp_imports', $fileName);
-        $fullPath = storage_path('app/' . $path);
+        
+        $fullPath = Storage::path($path);
 
        
         ImportUsersJob::dispatch($fullPath);
