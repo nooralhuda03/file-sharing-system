@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\FolderController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\PermissionController;
 
 Route::post('register', [AuthController::class, 'register']);
 Route::post('login', [AuthController::class, 'login']);
@@ -30,5 +32,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('folders/{folder}/files/{id}', [FileController::class, 'destroy']);
     Route::get('folders/{folder}/files/{id}/download', [FileController::class, 'download']);
     Route::patch('folders/{folder}/files/{id}/visibility', [FileController::class, 'setVisibility']);
+
+    Route::apiResource('roles', RoleController::class);
+    Route::post('CreateRole', [RoleController::class, 'store']);
+    Route::get('ShowRole/{id}', [RoleController::class, 'show']);
+    Route::put('UpdateRole/{id}', [RoleController::class, 'update']);
+    Route::delete('DeleteRole/{id}', [RoleController::class, 'destroy']);
+
+    Route::apiResource('permissions', PermissionController::class);
+    Route::post('CreatePermission', [PermissionController::class, 'store']);
+    Route::delete('DeletePermission/{id}', [PermissionController::class, 'destroy']);
+
+    Route::post('roles/{id}/permissions', [RoleController::class, 'assignPermissions']);
 
 });

@@ -11,7 +11,8 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Hash;
-use OpenSpout\Reader\XLSX\Reader;
+use OpenSpout\Reader\XLSX\Reader;    
+use App\Models\Role;
 
 class ImportUsersJob implements ShouldQueue
 {
@@ -67,22 +68,31 @@ class ImportUsersJob implements ShouldQueue
         }
     }
 
-    private function insertAndSendEmails($usersBatch)
-    {
-     
-        $existingEmails = User::whereIn('email', array_column($usersBatch, 'email'))
-            ->pluck('email')
-            ->toArray();
 
- 
-        User::upsert($usersBatch, ['email'], ['name', 'password']);
+private function insertAndSendEmails($usersBatch)
+{
+    $emails = array_column($usersBatch, 'email');
 
-        foreach ($usersBatch as $userData) {
-            if (!in_array($userData['email'], $existingEmails)) {
+    $existingEmails = User::whereIn('email', $emails)
+        ->pluck('email')
+        ->toArray();
 
-                Mail::to($userData['email'])
-                    ->queue(new WelcomeUserMail((object)$userData));
-            }
+    User::upsert($usersBatch, ['email'], ['name', 'password']);
+
+    $users = User::whereIn('email', $emails)->get();
+
+    $role = Role::where('name', 'user')->first();
+
+    foreach ($users as $user) {
+
+        $user->roles()->syncWithoutDetaching([$role->id]);
+    }
+
+    foreach ($usersBatch as $userData) {
+        if (!in_array($userData['email'], $existingEmails)) {
+            Mail::to($userData['email'])
+                ->queue(new WelcomeUserMail((object)$userData));
         }
     }
+}
 }
